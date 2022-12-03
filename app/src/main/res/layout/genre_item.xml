@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="40dp"
+    android:layout_margin="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="@drawable/item_ripple"
+    android:translationZ="2dp"
+    app:cardCornerRadius="8dp"
+    tools:ignore="UnusedAttribute">
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:background="@color/secondary_color"
+        android:minWidth="24dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp">
+
+        <TextView
+            android:id="@+id/tv_genre_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/poppins_semibold"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:includeFontPadding="false"
+            tools:text="Example of Genre"
+            android:layout_centerInParent="true"/>
+
+    </RelativeLayout>
+
+</androidx.cardview.widget.CardView>
