@@ -17,10 +17,10 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        Properties properties = new Properties()
-        properties.load(project.rootProject.file("local.properties").newDataInputStream())
-        buildConfigField "String", "TMDB_TOKEN_V3", "\"${properties.getProperty("TMDB_TOKEN_V3")}\""
-        buildConfigField "String", "TMDB_TOKEN_V4", "\"${properties.getProperty("TMDB_TOKEN_V4")}\""
+//        Properties properties = new Properties()
+//        properties.load(project.rootProject.file("local.properties").newDataInputStream())
+//        buildConfigField "String", "TMDB_TOKEN_V3", "\"${properties.getProperty("TMDB_TOKEN_V3")}\""
+//        buildConfigField "String", "TMDB_TOKEN_V4", "\"${properties.getProperty("TMDB_TOKEN_V4")}\""
     }
 
     buildTypes {
