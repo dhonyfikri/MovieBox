@@ -1,7 +1,10 @@
 package com.fikri.moviebox
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -12,10 +15,9 @@ import com.fikri.moviebox.core.data.source.remote.network.ApiConfig
 import com.fikri.moviebox.core.data.source.remote.network.Server
 import com.fikri.moviebox.core.data.source.remote.network.Token
 import com.fikri.moviebox.core.data.source.remote.response.MovieDetailResponse
-import com.fikri.moviebox.core.domain.model.Genre
-import com.fikri.moviebox.core.domain.model.Movie
-import com.fikri.moviebox.core.domain.model.MovieDetail
-import com.fikri.moviebox.core.domain.model.ProductionCompanies
+import com.fikri.moviebox.core.data.source.remote.response.ReviewListResponse
+import com.fikri.moviebox.core.domain.model.*
+import com.fikri.moviebox.core.ui.adapter.FixedReviewListAdapter
 import com.fikri.moviebox.core.ui.adapter.GenreListOfMovieAdapter
 import com.fikri.moviebox.core.ui.adapter.ProductionCompaniesAdapter
 import com.fikri.moviebox.databinding.ActivityMovieDetailBinding
@@ -47,6 +49,8 @@ class MovieDetailActivity : AppCompatActivity() {
         binding.rvCompanies.setHasFixedSize(true)
         binding.rvCompanies.layoutManager =
             LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+        binding.rvReview.setHasFixedSize(true)
+        binding.rvReview.layoutManager = LinearLayoutManager(this)
 
         binding.apply {
             header.tvHeaderTitle.text = "Movie Detail"
@@ -76,6 +80,7 @@ class MovieDetailActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 getDetailMovie(movie.id as Int)
+                getTopReview(movie.id as Int)
             }
         } else {
             Glide.with(this@MovieDetailActivity)
@@ -101,6 +106,30 @@ class MovieDetailActivity : AppCompatActivity() {
     private fun setProductionCompaniesList(listCompany: ArrayList<ProductionCompanies>) {
         val adapterProductionCompanies = ProductionCompaniesAdapter(listCompany)
         binding.rvCompanies.adapter = adapterProductionCompanies
+    }
+
+    private fun setTopReview(reviewList: ArrayList<Review>) {
+        if (reviewList.size > 3) {
+            binding.btnMoreReview.visibility = View.VISIBLE
+        }
+        val limitedReviewList: ArrayList<Review> = arrayListOf()
+        reviewList.map {
+            if (limitedReviewList.size < 3) {
+                limitedReviewList.add(it)
+            }
+        }
+        val adapterTopReview = FixedReviewListAdapter(limitedReviewList)
+        binding.rvReview.adapter = adapterTopReview
+
+        adapterTopReview.setOnItemClickCallback(object :
+            FixedReviewListAdapter.OnItemClickCallback {
+            override fun onClickedItem(data: Review) {
+                val moveToReviewDetail =
+                    Intent(this@MovieDetailActivity, ReviewDetailActivity::class.java)
+                moveToReviewDetail.putExtra(ReviewDetailActivity.EXTRA_REVIEW, data)
+                startActivity(moveToReviewDetail)
+            }
+        })
     }
 
     suspend fun getDetailMovie(movieId: Int) {
@@ -148,8 +177,74 @@ class MovieDetailActivity : AppCompatActivity() {
                 binding.apply {
                     tvDuration.text = "${movieDetail.runtime} Minutes"
                     tvTagline.text = movieDetail.tagline
+                    btnWebsite.setOnClickListener {
+                        if (movieDetail.homepage == null || (movieDetail.homepage
+                                ?: "").isEmpty()
+                        ) {
+                            Toast.makeText(
+                                this@MovieDetailActivity,
+                                "Website unavailable",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse(movieDetail.homepage)
+                                )
+                            )
+                        }
+                    }
                 }
                 setProductionCompaniesList(productionCompanies)
+            } else {
+                var errorMessage: String? = null
+                try {
+                    val jObjError = JSONObject(response.errorBody()!!.string())
+                    errorMessage = jObjError.getString("message")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                Log.w("Error:", "${response.message()} | $errorMessage")
+                Toast.makeText(this, "${response.message()} | $errorMessage", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        } catch (e: IOException) {
+            Log.w("Network Error:", "Gak tau")
+            Toast.makeText(this, "Koneksi Gagal", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    suspend fun getTopReview(movieId: Int) {
+        val apiRequest = ApiConfig.getApiService()
+            .getListReview(apiKey = Token.TMDB_TOKEN_V3, movieId = movieId)
+
+        try {
+            val response: Response<ReviewListResponse> = apiRequest.awaitResponse()
+            if (response.isSuccessful) {
+                val responseBody = response.body()
+                Log.d("Berhasil:", responseBody.toString())
+                val listReview: ArrayList<Review> = arrayListOf()
+                responseBody?.results?.map {
+                    val authorDetails = AuthorReviewDetails(
+                        it.authorDetails?.name,
+                        it.authorDetails?.username,
+                        it.authorDetails?.avatarPath,
+                        it.authorDetails?.rating
+                    )
+                    listReview.add(
+                        Review(
+                            it.author,
+                            authorDetails,
+                            it.content,
+                            it.createdAt,
+                            it.id,
+                            it.updatedAt,
+                            it.url
+                        )
+                    )
+                }
+                setTopReview(listReview)
             } else {
                 var errorMessage: String? = null
                 try {

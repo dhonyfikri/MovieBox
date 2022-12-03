@@ -3,6 +3,7 @@ package com.fikri.moviebox.core.data.source.remote.network
 import com.fikri.moviebox.core.data.source.remote.response.GenreListResponse
 import com.fikri.moviebox.core.data.source.remote.response.MovieDetailResponse
 import com.fikri.moviebox.core.data.source.remote.response.MovieListResponse
+import com.fikri.moviebox.core.data.source.remote.response.ReviewListResponse
 import retrofit2.Call
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -32,4 +33,12 @@ interface ApiService {
         @Query("api_key") apiKey: String,
         @Query("language") language: String = "en-US",
     ): Call<MovieDetailResponse>
+
+    @GET("movie/{movie_id}/reviews")
+    fun getListReview(
+        @Path("movie_id") movieId: Int,
+        @Query("api_key") apiKey: String,
+        @Query("language") language: String = "en-US",
+        @Query("page") page: Int = 1,
+    ): Call<ReviewListResponse>
 }
