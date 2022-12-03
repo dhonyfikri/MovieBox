@@ -24,14 +24,19 @@
         tools:text="Title" />
 
     <ImageButton
+        android:id="@+id/ib_back"
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_marginStart="8dp"
         android:background="@color/primary_color"
         android:src="@drawable/ic_arrow_left"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="@drawable/item_ripple"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:tint="@color/white" />
+        app:tint="@color/white"
+        tools:ignore="UnusedAttribute" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,10 +1,12 @@
 package com.fikri.moviebox
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fikri.moviebox.core.data.source.remote.network.ApiConfig
@@ -33,6 +35,9 @@ class MainActivity : AppCompatActivity() {
 
     private var isGenreTabCollapsed = true
 
+    private var listMovie: ArrayList<Movie> = arrayListOf()
+    private var listGenre: ArrayList<Genre> = arrayListOf()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -51,7 +56,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             getAllGenre()
-            getPopularMoview()
+            getPopularMovie()
         }
 
         binding.ibGenreToggle.setOnClickListener {
@@ -65,13 +70,17 @@ class MainActivity : AppCompatActivity() {
 
         adapterPopularMovie.setOnItemClickCallback(object :
             FixedMovieListAdapter.OnItemClickCallback {
-            //            override fun onClickedItem(data: UserTail) {
-//                val moveToUserDetail = Intent(this@ListUserActivity, UserDetailActivity::class.java)
-//                moveToUserDetail.putExtra(UserDetailActivity.EXTRA_USER, data)
-//                startActivity(moveToUserDetail)
-//            }
             override fun onClickedItem(data: Movie) {
-                Toast.makeText(this@MainActivity, data.title, Toast.LENGTH_SHORT).show()
+                val genresOfMovie: ArrayList<Genre> = arrayListOf()
+                listGenre.forEach {
+                    if(data.genreIds.contains(it.id)){
+                        genresOfMovie.add(it)
+                    }
+                }
+                val moveToMovieDetail = Intent(this@MainActivity, MovieDetailActivity::class.java)
+                moveToMovieDetail.putExtra(MovieDetailActivity.EXTRA_MOVIE, data)
+                moveToMovieDetail.putExtra(MovieDetailActivity.EXTRA_GENRE, genresOfMovie)
+                startActivity(moveToMovieDetail)
             }
         })
     }
@@ -88,7 +97,7 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    suspend fun getPopularMoview() {
+    suspend fun getPopularMovie() {
         val apiRequest = ApiConfig.getApiService().getListMovie(apiKey = Token.TMDB_TOKEN_V3)
 
         try {
@@ -96,7 +105,6 @@ class MainActivity : AppCompatActivity() {
             if (response.isSuccessful) {
                 val responseBody = response.body()
                 Log.d("Berhasil:", responseBody.toString())
-                val listMovie: ArrayList<Movie> = arrayListOf()
                 responseBody?.let {
                     it.results.forEach { movieResponse ->
                         val movie = Movie(
@@ -145,7 +153,6 @@ class MainActivity : AppCompatActivity() {
             if (response.isSuccessful) {
                 val responseBody = response.body()
                 Log.d("Berhasil:", responseBody.toString())
-                val listGenre: ArrayList<Genre> = arrayListOf()
                 responseBody?.let {
                     it.genres.forEach { genreResponse ->
                         val genre = Genre(
@@ -179,8 +186,10 @@ class MainActivity : AppCompatActivity() {
         val params = binding.llGenreTab.layoutParams
         if (isGenreTabCollapsed) {
             params.height = DimensManipulation.dpToPx(this, 140f).toInt()
+            binding.ibGenreToggle.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_down))
         } else {
             params.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            binding.ibGenreToggle.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_up))
         }
         binding.llGenreTab.layoutParams = params
     }
