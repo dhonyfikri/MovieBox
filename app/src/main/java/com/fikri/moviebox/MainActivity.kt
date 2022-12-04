@@ -3,10 +3,13 @@ package com.fikri.moviebox
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
+import androidx.core.util.Pair
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fikri.moviebox.core.data.source.remote.network.ApiConfig
@@ -70,17 +73,21 @@ class MainActivity : AppCompatActivity() {
 
         adapterPopularMovie.setOnItemClickCallback(object :
             FixedMovieListAdapter.OnItemClickCallback {
-            override fun onClickedItem(data: Movie) {
+            override fun onClickedItem(data: Movie, posterView: View) {
                 val genresOfMovie: ArrayList<Genre> = arrayListOf()
                 listGenre.forEach {
-                    if(data.genreIds.contains(it.id)){
+                    if (data.genreIds.contains(it.id)) {
                         genresOfMovie.add(it)
                     }
                 }
                 val moveToMovieDetail = Intent(this@MainActivity, MovieDetailActivity::class.java)
                 moveToMovieDetail.putExtra(MovieDetailActivity.EXTRA_MOVIE, data)
                 moveToMovieDetail.putExtra(MovieDetailActivity.EXTRA_GENRE, genresOfMovie)
-                startActivity(moveToMovieDetail)
+                startActivity(
+                    moveToMovieDetail, ActivityOptionsCompat.makeSceneTransitionAnimation(
+                        this@MainActivity, Pair(posterView, "poster_image_view")
+                    ).toBundle()
+                )
             }
         })
     }
@@ -92,7 +99,11 @@ class MainActivity : AppCompatActivity() {
         adapterGenre.setOnItemClickCallback(object :
             GenreListAdapter.OnItemClickCallback {
             override fun onClickedItem(data: Genre) {
-                Toast.makeText(this@MainActivity, data.name, Toast.LENGTH_SHORT).show()
+                val moveToGenreDiscover =
+                    Intent(this@MainActivity, GenreDiscoverActivity::class.java)
+                moveToGenreDiscover.putExtra(GenreDiscoverActivity.EXTRA_SELECTED_GENRE, data)
+                moveToGenreDiscover.putExtra(GenreDiscoverActivity.EXTRA_LIST_OF_GENRE, listGenre)
+                startActivity(moveToGenreDiscover)
             }
         })
     }
@@ -186,10 +197,20 @@ class MainActivity : AppCompatActivity() {
         val params = binding.llGenreTab.layoutParams
         if (isGenreTabCollapsed) {
             params.height = DimensManipulation.dpToPx(this, 140f).toInt()
-            binding.ibGenreToggle.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_down))
+            binding.ibGenreToggle.setImageDrawable(
+                ContextCompat.getDrawable(
+                    this,
+                    R.drawable.ic_down
+                )
+            )
         } else {
             params.height = ViewGroup.LayoutParams.WRAP_CONTENT
-            binding.ibGenreToggle.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_up))
+            binding.ibGenreToggle.setImageDrawable(
+                ContextCompat.getDrawable(
+                    this,
+                    R.drawable.ic_up
+                )
+            )
         }
         binding.llGenreTab.layoutParams = params
     }

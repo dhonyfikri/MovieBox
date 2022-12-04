@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="?android:color"
     android:orientation="vertical"
-    tools:context=".MovieDetailActivity">
+    tools:context=".MovieReviewActivity">
 
     <include
         android:id="@+id/header"

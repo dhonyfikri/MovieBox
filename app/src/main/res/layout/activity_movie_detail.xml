@@ -51,6 +51,7 @@
                         android:layout_width="100dp"
                         android:layout_height="150dp"
                         android:scaleType="centerCrop"
+                        android:transitionName="poster_image_view"
                         tools:src="@tools:sample/avatars" />
 
                 </androidx.cardview.widget.CardView>

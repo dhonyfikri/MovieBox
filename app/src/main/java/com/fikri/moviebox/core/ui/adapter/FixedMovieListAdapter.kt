@@ -1,6 +1,7 @@
 package com.fikri.moviebox.core.ui.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -37,7 +38,7 @@ class FixedMovieListAdapter(private val listMovie: ArrayList<Movie>) :
         }
 
         holder.itemView.setOnClickListener {
-            onItemClickCallback.onClickedItem(listMovie[position])
+            onItemClickCallback.onClickedItem(listMovie[position], holder.binding.ivPoster)
         }
     }
 
@@ -48,47 +49,6 @@ class FixedMovieListAdapter(private val listMovie: ArrayList<Movie>) :
     }
 
     interface OnItemClickCallback {
-        fun onClickedItem(data: Movie)
+        fun onClickedItem(data: Movie, posterView: View)
     }
 }
-
-
-//class ListUserAdapter(private val listUserTail: ArrayList<UserTail>) :
-//    RecyclerView.Adapter<ListUserAdapter.ListViewHolder>() {
-//
-//    private lateinit var onItemClickCallback: OnItemClickCallback
-//
-//    class ListViewHolder(var binding: UserListItemBinding) : RecyclerView.ViewHolder(binding.root)
-//
-//    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ListViewHolder {
-//        val binding =
-//            UserListItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-//        return ListViewHolder(binding)
-//    }
-//
-//    override fun onBindViewHolder(holder: ListViewHolder, position: Int) {
-//        holder.binding.apply {
-//            tvName.text = listUserTail[position].username
-//            tvUserGithubLink.text = listUserTail[position].github_link
-//        }
-//        Glide.with(holder.itemView.context)
-//            .load(listUserTail[position].avatar)
-//            .error(R.drawable.default_user_image)
-//            .circleCrop()
-//            .into(holder.binding.ivAvatarThumbnail)
-//
-//        holder.itemView.setOnClickListener {
-//            onItemClickCallback.onClickedItem(listUserTail[holder.adapterPosition])
-//        }
-//    }
-//
-//    override fun getItemCount(): Int = listUserTail.size
-//
-//    fun setOnItemClickCallback(onItemClickCallback: OnItemClickCallback) {
-//        this.onItemClickCallback = onItemClickCallback
-//    }
-//
-//    interface OnItemClickCallback {
-//        fun onClickedItem(data: UserTail)
-//    }
-//}

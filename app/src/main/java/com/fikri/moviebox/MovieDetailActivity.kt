@@ -81,7 +81,7 @@ class MovieDetailActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 getDetailMovie(movie.id as Int)
-                getTopReview(movie.id as Int)
+                getReview(movie.id as Int)
                 getVideoTrailer(movie.id as Int)
             }
         } else {
@@ -217,7 +217,7 @@ class MovieDetailActivity : AppCompatActivity() {
         }
     }
 
-    suspend fun getTopReview(movieId: Int) {
+    suspend fun getReview(movieId: Int) {
         val apiRequest = ApiConfig.getApiService()
             .getListReview(apiKey = Token.TMDB_TOKEN_V3, movieId = movieId)
 
@@ -245,6 +245,12 @@ class MovieDetailActivity : AppCompatActivity() {
                             it.url
                         )
                     )
+                }
+                binding.btnMoreReview.setOnClickListener {
+                    val moveToReviewList =
+                        Intent(this@MovieDetailActivity, MovieReviewActivity::class.java)
+                    moveToReviewList.putExtra(MovieReviewActivity.EXTRA_SELECTED_MOVIE, movie)
+                    startActivity(moveToReviewList)
                 }
                 setTopReview(listReview)
             } else {
