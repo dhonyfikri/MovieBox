@@ -3,30 +3,22 @@ package com.fikri.moviebox
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.fikri.moviebox.core.data.source.remote.network.ApiConfig
+import com.fikri.moviebox.core.data.Resource
 import com.fikri.moviebox.core.data.source.remote.network.Server
 import com.fikri.moviebox.core.data.source.remote.network.Token
-import com.fikri.moviebox.core.data.source.remote.response.MovieDetailResponse
-import com.fikri.moviebox.core.data.source.remote.response.MovieVideoListResponse
-import com.fikri.moviebox.core.data.source.remote.response.ReviewListResponse
 import com.fikri.moviebox.core.domain.model.*
 import com.fikri.moviebox.core.ui.adapter.FixedReviewListAdapter
 import com.fikri.moviebox.core.ui.adapter.GenreListOfMovieAdapter
 import com.fikri.moviebox.core.ui.adapter.ProductionCompaniesAdapter
 import com.fikri.moviebox.databinding.ActivityMovieDetailBinding
-import kotlinx.coroutines.launch
-import org.json.JSONObject
-import retrofit2.Response
-import retrofit2.awaitResponse
-import java.io.IOException
+import com.fikri.moviebox.view_model.MovieDetailViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MovieDetailActivity : AppCompatActivity() {
 
@@ -37,7 +29,8 @@ class MovieDetailActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMovieDetailBinding
 
-    private lateinit var movie: Movie
+    private val viewModel: MovieDetailViewModel by viewModel()
+
     private var genreListOfMovie: ArrayList<Genre> = arrayListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +38,16 @@ class MovieDetailActivity : AppCompatActivity() {
         binding = ActivityMovieDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        if (intent.getParcelableArrayListExtra<Genre>(EXTRA_GENRE) != null) {
+            genreListOfMovie =
+                intent.getParcelableArrayListExtra<Genre>(EXTRA_GENRE) as ArrayList<Genre>
+            setGenreListOfMovie(genreListOfMovie)
+        }
+
+        setupData()
+    }
+
+    private fun setupData() {
         binding.rvGenre.setHasFixedSize(true)
         binding.rvGenre.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
         binding.rvCompanies.setHasFixedSize(true)
@@ -61,29 +64,100 @@ class MovieDetailActivity : AppCompatActivity() {
         }
 
         if (intent.getParcelableExtra<Movie>(EXTRA_MOVIE) != null) {
-            movie = intent.getParcelableExtra<Movie>(EXTRA_MOVIE) as Movie
+            viewModel.selectedMovie = intent.getParcelableExtra<Movie>(EXTRA_MOVIE) as Movie
 
             Glide.with(this@MovieDetailActivity)
-                .load(Server.TMDB_IMAGE_BASE_URL + movie.backdropPath)
+                .load(Server.TMDB_IMAGE_BASE_URL + viewModel.selectedMovie.backdropPath)
                 .error(R.drawable.default_image)
                 .into(binding.ivBackdrop)
 
             Glide.with(this@MovieDetailActivity)
-                .load(Server.TMDB_IMAGE_BASE_URL + movie.posterPath)
+                .load(Server.TMDB_IMAGE_BASE_URL + viewModel.selectedMovie.posterPath)
                 .error(R.drawable.default_image)
                 .into(binding.ivPoster)
 
             binding.apply {
-                tvTitle.text = movie.title
-                tvRating.text = "${movie.voteAverage} ( ${movie.voteCount}  of vote )"
-                tvOverview.text = movie.overview
+                tvTitle.text = viewModel.selectedMovie.title
+                tvRating.text =
+                    "${viewModel.selectedMovie.voteAverage} ( ${viewModel.selectedMovie.voteCount}  of vote )"
+                tvOverview.text = viewModel.selectedMovie.overview
             }
 
-            lifecycleScope.launch {
-                getDetailMovie(movie.id as Int)
-                getReview(movie.id as Int)
-                getVideoTrailer(movie.id as Int)
+            viewModel.isInitialObserveFlow.observe(this) {
+                if (!it) {
+                    getDetailMovie()
+                    getReview()
+                    getVideoTrailer()
+                    viewModel.setFinishInitialObserveFlow()
+                }
             }
+
+            binding.srlSwipeRefeshDetailMovie.setOnRefreshListener {
+                binding.srlSwipeRefeshDetailMovie.isRefreshing = false
+                getDetailMovie()
+                getReview()
+                getVideoTrailer()
+            }
+
+            viewModel.movieDetail.observe(this) { detailMovie ->
+                binding.apply {
+                    tvDuration.text = "${detailMovie.runtime} Minutes"
+                    tvTagline.text = detailMovie.tagline
+                    btnWebsite.setOnClickListener {
+                        if (detailMovie.homepage == null || (detailMovie.homepage
+                                ?: "").isEmpty()
+                        ) {
+                            Toast.makeText(
+                                this@MovieDetailActivity,
+                                "Website unavailable",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse(detailMovie.homepage)
+                                )
+                            )
+                        }
+                    }
+                }
+                setProductionCompaniesList(detailMovie.productionCompanies)
+            }
+
+            viewModel.listReview.observe(this) { listReview ->
+                binding.btnMoreReview.setOnClickListener {
+                    val moveToReviewList =
+                        Intent(this@MovieDetailActivity, MovieReviewActivity::class.java)
+                    moveToReviewList.putExtra(
+                        MovieReviewActivity.EXTRA_SELECTED_MOVIE,
+                        viewModel.selectedMovie
+                    )
+                    startActivity(moveToReviewList)
+                }
+                setTopReview(listReview)
+            }
+
+            viewModel.listMovieVideo.observe(this) { listVideo ->
+                binding.btnTrailer.setOnClickListener {
+                    if (listVideo.size > 0) {
+                        val moveToMovieTrailer =
+                            Intent(this@MovieDetailActivity, TrailerActivity::class.java)
+                        moveToMovieTrailer.putExtra(
+                            TrailerActivity.EXTRA_YOUTUBE_VIDEO,
+                            listVideo[0]
+                        )
+                        startActivity(moveToMovieTrailer)
+                    } else {
+                        Toast.makeText(
+                            this@MovieDetailActivity,
+                            "Trailer unavailable",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+
         } else {
             Glide.with(this@MovieDetailActivity)
                 .load(R.drawable.default_image)
@@ -91,12 +165,6 @@ class MovieDetailActivity : AppCompatActivity() {
             Glide.with(this@MovieDetailActivity)
                 .load(R.drawable.default_image)
                 .into(binding.ivPoster)
-        }
-
-        if (intent.getParcelableArrayListExtra<Genre>(EXTRA_GENRE) != null) {
-            genreListOfMovie =
-                intent.getParcelableArrayListExtra<Genre>(EXTRA_GENRE) as ArrayList<Genre>
-            setGenreListOfMovie(genreListOfMovie)
         }
     }
 
@@ -113,6 +181,8 @@ class MovieDetailActivity : AppCompatActivity() {
     private fun setTopReview(reviewList: ArrayList<Review>) {
         if (reviewList.size > 3) {
             binding.btnMoreReview.visibility = View.VISIBLE
+        } else {
+            binding.btnMoreReview.visibility = View.GONE
         }
         val limitedReviewList: ArrayList<Review> = arrayListOf()
         reviewList.map {
@@ -134,204 +204,102 @@ class MovieDetailActivity : AppCompatActivity() {
         })
     }
 
-    suspend fun getDetailMovie(movieId: Int) {
-        val apiRequest = ApiConfig.getApiService()
-            .getDetailMovie(apiKey = Token.TMDB_TOKEN_V3, movieId = movieId)
+    fun getDetailMovie() {
+        binding.apply {
+            viewModel.getDetailMovie(Token.TMDB_TOKEN_V3, viewModel.selectedMovie.id ?: 0)
+                .observe(this@MovieDetailActivity) { result ->
+                    when (result) {
+                        is Resource.Loading -> {
+                            rlLoadingCompany.visibility = View.VISIBLE
+                            rlCompanyMessage.visibility = View.GONE
+                            rvCompanies.visibility = View.GONE
+                        }
+                        is Resource.Success -> {
+                            val movieDetail = result.data[0]
+                            viewModel.setMovieDetailValue(movieDetail)
 
-        try {
-            val response: Response<MovieDetailResponse> = apiRequest.awaitResponse()
-            if (response.isSuccessful) {
-                val responseBody = response.body()
-                Log.d("Berhasil:", responseBody.toString())
-                val genres = responseBody?.genres?.map { Genre(it.id, it.name) } as ArrayList<Genre>
-                val productionCompanies = responseBody.productionCompanies.map {
-                    ProductionCompanies(
-                        it.id,
-                        it.logoPath,
-                        it.name,
-                        it.originCountry
-                    )
-                } as ArrayList<ProductionCompanies>
-                val movieDetail = MovieDetail(
-                    responseBody.adult,
-                    responseBody.backdropPath,
-                    responseBody.budget,
-                    genres,
-                    responseBody.homepage,
-                    responseBody.id,
-                    responseBody.imdbId,
-                    responseBody.originalLanguage,
-                    responseBody.originalTitle,
-                    responseBody.overview,
-                    responseBody.popularity,
-                    responseBody.posterPath,
-                    productionCompanies,
-                    responseBody.releaseDate,
-                    responseBody.revenue,
-                    responseBody.runtime,
-                    responseBody.status,
-                    responseBody.tagline,
-                    responseBody.title,
-                    responseBody.video,
-                    responseBody.voteAverage,
-                    responseBody.voteCount
-                )
-                binding.apply {
-                    tvDuration.text = "${movieDetail.runtime} Minutes"
-                    tvTagline.text = movieDetail.tagline
-                    btnWebsite.setOnClickListener {
-                        if (movieDetail.homepage == null || (movieDetail.homepage
-                                ?: "").isEmpty()
-                        ) {
-                            Toast.makeText(
-                                this@MovieDetailActivity,
-                                "Website unavailable",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            startActivity(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse(movieDetail.homepage)
-                                )
-                            )
+                            rlLoadingCompany.visibility = View.GONE
+                            rlCompanyMessage.visibility = View.GONE
+                            rvCompanies.visibility = View.VISIBLE
+                            if (movieDetail.productionCompanies.size == 0) {
+                                rlCompanyMessage.visibility = View.VISIBLE
+                                tvCompanyMessage.text = "No Data of Company Production"
+                            }
+                        }
+                        is Resource.Error -> {
+                            rlLoadingCompany.visibility = View.GONE
+                            rlCompanyMessage.visibility = View.VISIBLE
+                            tvCompanyMessage.text = result.message
+                            rvCompanies.visibility = View.GONE
+                        }
+                        is Resource.NetworkError -> {
+                            rlLoadingCompany.visibility = View.GONE
+                            rlCompanyMessage.visibility = View.VISIBLE
+                            tvCompanyMessage.text = "Connection Failed"
+                            rvCompanies.visibility = View.GONE
                         }
                     }
                 }
-                setProductionCompaniesList(productionCompanies)
-            } else {
-                var errorMessage: String? = null
-                try {
-                    val jObjError = JSONObject(response.errorBody()!!.string())
-                    errorMessage = jObjError.getString("message")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                Log.w("Error:", "${response.message()} | $errorMessage")
-                Toast.makeText(this, "${response.message()} | $errorMessage", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        } catch (e: IOException) {
-            Log.w("Network Error:", "Gak tau")
-            Toast.makeText(this, "Koneksi Gagal", Toast.LENGTH_SHORT).show()
         }
     }
 
-    suspend fun getReview(movieId: Int) {
-        val apiRequest = ApiConfig.getApiService()
-            .getListReview(apiKey = Token.TMDB_TOKEN_V3, movieId = movieId)
+    fun getReview() {
+        binding.apply {
+            viewModel.getReview(Token.TMDB_TOKEN_V3, viewModel.selectedMovie.id ?: 0)
+                .observe(this@MovieDetailActivity) { result ->
+                    when (result) {
+                        is Resource.Loading -> {
+                            rlLoadingReview.visibility = View.VISIBLE
+                            rlReviewMessage.visibility = View.GONE
+                            rvReview.visibility = View.GONE
+                        }
+                        is Resource.Success -> {
+                            val listReview = result.data as ArrayList<Review>
+                            viewModel.setListReviewValue(listReview)
 
-        try {
-            val response: Response<ReviewListResponse> = apiRequest.awaitResponse()
-            if (response.isSuccessful) {
-                val responseBody = response.body()
-                Log.d("Berhasil:", responseBody.toString())
-                val listReview: ArrayList<Review> = arrayListOf()
-                responseBody?.results?.map {
-                    val authorDetails = AuthorReviewDetails(
-                        it.authorDetails?.name,
-                        it.authorDetails?.username,
-                        it.authorDetails?.avatarPath,
-                        it.authorDetails?.rating
-                    )
-                    listReview.add(
-                        Review(
-                            it.author,
-                            authorDetails,
-                            it.content,
-                            it.createdAt,
-                            it.id,
-                            it.updatedAt,
-                            it.url
-                        )
-                    )
+                            rlLoadingReview.visibility = View.GONE
+                            rlReviewMessage.visibility = View.GONE
+                            rvReview.visibility = View.VISIBLE
+                            if (listReview.size == 0) {
+                                rlReviewMessage.visibility = View.VISIBLE
+                                tvReviewMessage.text = "No Data of Movie Review"
+                            }
+                        }
+                        is Resource.Error -> {
+                            rlLoadingReview.visibility = View.GONE
+                            rlReviewMessage.visibility = View.VISIBLE
+                            tvReviewMessage.text = result.message
+                            rvReview.visibility = View.GONE
+                        }
+                        is Resource.NetworkError -> {
+                            rlLoadingReview.visibility = View.GONE
+                            rlReviewMessage.visibility = View.VISIBLE
+                            tvReviewMessage.text = "Connection Failed"
+                            rvReview.visibility = View.GONE
+                        }
+                    }
                 }
-                binding.btnMoreReview.setOnClickListener {
-                    val moveToReviewList =
-                        Intent(this@MovieDetailActivity, MovieReviewActivity::class.java)
-                    moveToReviewList.putExtra(MovieReviewActivity.EXTRA_SELECTED_MOVIE, movie)
-                    startActivity(moveToReviewList)
-                }
-                setTopReview(listReview)
-            } else {
-                var errorMessage: String? = null
-                try {
-                    val jObjError = JSONObject(response.errorBody()!!.string())
-                    errorMessage = jObjError.getString("message")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                Log.w("Error:", "${response.message()} | $errorMessage")
-                Toast.makeText(this, "${response.message()} | $errorMessage", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        } catch (e: IOException) {
-            Log.w("Network Error:", "Gak tau")
-            Toast.makeText(this, "Koneksi Gagal", Toast.LENGTH_SHORT).show()
         }
     }
 
-    suspend fun getVideoTrailer(movieId: Int) {
-        val apiRequest = ApiConfig.getApiService()
-            .getMovieVideo(apiKey = Token.TMDB_TOKEN_V3, movieId = movieId)
-
-        try {
-            val response: Response<MovieVideoListResponse> = apiRequest.awaitResponse()
-            if (response.isSuccessful) {
-                val responseBody = response.body()
-                Log.d("Berhasil:", responseBody.toString())
-                val listMovieVideo: ArrayList<MovieVideo> = arrayListOf()
-                responseBody?.results?.map {
-                    if (it.type?.lowercase() == "trailer") {
-                        listMovieVideo.add(
-                            MovieVideo(
-                                it.iso6391,
-                                it.iso31661,
-                                it.name,
-                                it.key,
-                                it.site,
-                                it.size,
-                                it.type,
-                                it.official,
-                                it.publishedAt,
-                                it.id
-                            )
-                        )
+    fun getVideoTrailer() {
+        viewModel.getVideoTrailer(Token.TMDB_TOKEN_V3, viewModel.selectedMovie.id ?: 0)
+            .observe(this) { result ->
+                when (result) {
+                    is Resource.Loading -> {
+                        // Nothing and no UI
+                    }
+                    is Resource.Success -> {
+                        val listVideo = result.data as ArrayList<MovieVideo>
+                        viewModel.setListMovieVideoValue(listVideo)
+                    }
+                    is Resource.Error -> {
+                        // Nothing and no UI
+                    }
+                    is Resource.NetworkError -> {
+                        // Nothing and no UI
                     }
                 }
-                binding.btnTrailer.setOnClickListener {
-                    if (listMovieVideo.size > 0) {
-                        val moveToMovieTrailer =
-                            Intent(this@MovieDetailActivity, TrailerActivity::class.java)
-                        moveToMovieTrailer.putExtra(
-                            TrailerActivity.EXTRA_YOUTUBE_VIDEO,
-                            listMovieVideo[0]
-                        )
-                        startActivity(moveToMovieTrailer)
-                    } else {
-                        Toast.makeText(
-                            this@MovieDetailActivity,
-                            "Trailer unavailable",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-
-            } else {
-                var errorMessage: String? = null
-                try {
-                    val jObjError = JSONObject(response.errorBody()!!.string())
-                    errorMessage = jObjError.getString("message")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                Log.w("Error:", "${response.message()} | $errorMessage")
-                Toast.makeText(this, "${response.message()} | $errorMessage", Toast.LENGTH_SHORT)
-                    .show()
             }
-        } catch (e: IOException) {
-            Log.w("Network Error:", "Gak tau")
-            Toast.makeText(this, "Koneksi Gagal", Toast.LENGTH_SHORT).show()
-        }
     }
 }

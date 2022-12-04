@@ -15,131 +15,205 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ScrollView
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/srl_swipe_refesh_home"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/header">
+        android:layout_height="match_parent">
 
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_height="match_parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/header">
 
             <LinearLayout
-                android:id="@+id/ll_genre_tab"
-                android:layout_width="match_parent"
-                android:layout_height="140dp"
-                android:background="@drawable/genre_wrapper"
-                android:orientation="vertical"
-                android:paddingHorizontal="12dp"
-                android:paddingTop="12dp"
-                android:paddingBottom="28dp">
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_genre"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false"
-                    tools:itemCount="4"
-                    tools:listitem="@layout/genre_item"
-                    app:layoutManager="com.google.android.flexbox.FlexboxLayoutManager"/>
-
-            </LinearLayout>
-
-            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="-20dp">
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/ll_genre_tab"
+                    android:layout_width="match_parent"
+                    android:layout_height="138dp"
+                    android:background="@drawable/genre_wrapper"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="12dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="28dp">
+
+                    <RelativeLayout
+                        android:id="@+id/rl_genre_message"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tv_genre_message"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerInParent="true"
+                            android:fontFamily="@font/poppins_medium"
+                            android:textColor="@color/white"
+                            android:textSize="16dp"
+                            tools:text="No Data of Movie Genre" />
+
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:id="@+id/rl_loading_genre"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:visibility="gone">
+
+                        <ProgressBar
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerInParent="true"
+                            android:indeterminateDrawable="@drawable/progress_spin_bg"
+                            android:visibility="visible" />
+
+                    </RelativeLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv_genre"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:visibility="visible"
+                        app:layoutManager="com.google.android.flexbox.FlexboxLayoutManager"
+                        tools:itemCount="4"
+                        tools:listitem="@layout/genre_item" />
+
+                </LinearLayout>
 
                 <RelativeLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentStart="true"
-                    android:layout_marginStart="16dp"
-                    android:background="@drawable/label_wrapper"
-                    android:paddingHorizontal="18dp"
-                    android:paddingVertical="8dp">
+                    android:layout_marginTop="-20dp">
+
+                    <RelativeLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:layout_marginStart="16dp"
+                        android:background="@drawable/label_wrapper"
+                        android:paddingHorizontal="18dp"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/poppins_semibold"
+                            android:includeFontPadding="false"
+                            android:text="Movie Genres"
+                            android:textAlignment="center"
+                            android:textColor="@color/secondary_color"
+                            android:textSize="14sp" />
+
+                    </RelativeLayout>
+
+                    <ImageButton
+                        android:id="@+id/ib_genre_toggle"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_marginEnd="16dp"
+                        android:background="@drawable/custom_fab"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="@drawable/circular_ripple"
+                        android:src="@drawable/ic_down"
+                        tools:ignore="UnusedAttribute" />
+
+                </RelativeLayout>
+
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="18dp">
 
                     <TextView
+                        android:id="@+id/textView"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/poppins_semibold"
                         android:includeFontPadding="false"
-                        android:text="Movie Genres"
-                        android:textAlignment="center"
-                        android:textColor="@color/secondary_color"
-                        android:textSize="14sp" />
+                        android:text="Popular Movie"
+                        android:textColor="?android:textColorPrimary"
+                        android:textSize="20sp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintHorizontal_bias="0.0"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/rounded_corner_primary"
+                        app:layout_constraintEnd_toEndOf="@+id/textView"
+                        app:layout_constraintStart_toStartOf="@+id/textView"
+                        app:layout_constraintTop_toBottomOf="@+id/textView" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <RelativeLayout
+                        android:id="@+id/rl_popular_movie_message"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tv_popular_movie_message"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerInParent="true"
+                            android:fontFamily="@font/poppins_medium"
+                            android:textColor="?android:textColorSecondary"
+                            android:textSize="16dp"
+                            tools:text="No Data of Popular Movie" />
+
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:id="@+id/rl_loading_popular_movie"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:visibility="gone">
+
+                        <ProgressBar
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerInParent="true"
+                            android:indeterminateDrawable="@drawable/progress_spin_bg"
+                            android:visibility="visible" />
+
+                    </RelativeLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv_popular_movie"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:padding="12dp"
+                        android:visibility="visible"
+                        tools:itemCount="5"
+                        tools:listitem="@layout/movie_item" />
 
                 </RelativeLayout>
 
-                <ImageButton
-                    android:id="@+id/ib_genre_toggle"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_marginEnd="16dp"
-                    android:background="@drawable/custom_fab"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="@drawable/circular_ripple"
-                    android:src="@drawable/ic_down"
-                    tools:ignore="UnusedAttribute" />
+            </LinearLayout>
 
-            </RelativeLayout>
+        </ScrollView>
 
-
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="18dp">
-
-                <TextView
-                    android:id="@+id/textView"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/poppins_semibold"
-                    android:includeFontPadding="false"
-                    android:text="Popular Movie"
-                    android:textColor="?android:textColorPrimary"
-                    android:textSize="20sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintHorizontal_bias="0.0"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="4dp"
-                    android:layout_marginTop="4dp"
-                    android:background="@drawable/rounded_corner_primary"
-                    app:layout_constraintEnd_toEndOf="@+id/textView"
-                    app:layout_constraintStart_toStartOf="@+id/textView"
-                    app:layout_constraintTop_toBottomOf="@+id/textView" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_popular_movie"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false"
-                    android:padding="12dp"
-                    tools:itemCount="5"
-                    tools:listitem="@layout/movie_item" />
-
-            </RelativeLayout>
-
-        </LinearLayout>
-
-    </ScrollView>
-
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
 </LinearLayout>

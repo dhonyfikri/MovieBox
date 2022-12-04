@@ -1,4 +1,4 @@
-package com.fikri.moviebox.core.data.source.remote.network
+package com.fikri.moviebox.core.data.source.remote.response
 
 sealed class ApiResultWrapper<out T> {
     data class Success<out T>(val response: T, val message: String? = null) : ApiResultWrapper<T>()

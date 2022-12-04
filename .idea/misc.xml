@@ -21,6 +21,7 @@
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/activity_review_detail.xml" value="0.25" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/activity_review_list.xml" value="0.20416666666666666" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/activity_trailer.xml" value="0.25" />
+        <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/common_loading.xml" value="0.20416666666666666" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/company_item.xml" value="0.33" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/genre_item.xml" value="0.33" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/genre_item_outlined.xml" value="0.33" />
@@ -28,6 +29,9 @@
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/header_plain.xml" value="0.25" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/movie_item.xml" value="0.33" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/pagging_footer.xml" value="0.25" />
+        <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/paging_footer.xml" value="0.20416666666666666" />
+        <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/refresh_question_modal.xml" value="0.25" />
+        <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/response_modal.xml" value="0.22" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/layout/review_item.xml" value="0.33" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="0.1185" />
         <entry key="..\:/kerja/Mandiri/teknikal test/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.1185" />

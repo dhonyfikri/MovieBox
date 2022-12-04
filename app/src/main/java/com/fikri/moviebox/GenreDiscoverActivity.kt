@@ -3,18 +3,18 @@ package com.fikri.moviebox
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.util.Pair
-import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.fikri.moviebox.core.data.source.remote.network.Token
 import com.fikri.moviebox.core.domain.model.Genre
 import com.fikri.moviebox.core.domain.model.Movie
 import com.fikri.moviebox.core.ui.adapter.EndlessMovieListAdapter
 import com.fikri.moviebox.core.ui.adapter.LoadingStateAdapter
 import com.fikri.moviebox.databinding.ActivityGenreDiscoverBinding
 import com.fikri.moviebox.view_model.GenreDiscoverViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class GenreDiscoverActivity : AppCompatActivity() {
     companion object {
@@ -24,21 +24,18 @@ class GenreDiscoverActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityGenreDiscoverBinding
 
-    private lateinit var viewModel: GenreDiscoverViewModel
-    private lateinit var adapter: EndlessMovieListAdapter
+    private val viewModel: GenreDiscoverViewModel by viewModel()
+    private var adapter = EndlessMovieListAdapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityGenreDiscoverBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        adapter = EndlessMovieListAdapter()
+        setupData()
+    }
 
-        viewModel = ViewModelProvider(
-            this,
-            GenreDiscoverViewModelFactory()
-        )[GenreDiscoverViewModel::class.java]
-
+    private fun setupData() {
         binding.apply {
             header.tvHeaderTitle.text = "Discover of ..."
             header.ibBack.setOnClickListener {
@@ -50,7 +47,7 @@ class GenreDiscoverActivity : AppCompatActivity() {
             viewModel.selectedGenre =
                 intent.getParcelableExtra<Genre>(EXTRA_SELECTED_GENRE) as Genre
             val genreName = viewModel.selectedGenre?.name ?: ""
-            binding.header.tvHeaderTitle.text = "Discover of ${genreName}"
+            binding.header.tvHeaderTitle.text = "Discover of $genreName"
         }
         if (intent.getParcelableArrayListExtra<Genre>(EXTRA_LIST_OF_GENRE) != null) {
             viewModel.listOfGenre =
@@ -69,7 +66,7 @@ class GenreDiscoverActivity : AppCompatActivity() {
                         adapter.retry()
                     }
                 )
-                getMovieByGenre().observe(this@GenreDiscoverActivity) { data ->
+                getMovieByGenre(Token.TMDB_TOKEN_V3).observe(this@GenreDiscoverActivity) { data ->
                     adapter.submitData(lifecycle, data)
                 }
 

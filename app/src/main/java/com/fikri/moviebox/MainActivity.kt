@@ -2,50 +2,46 @@ package com.fikri.moviebox
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.content.ContextCompat
 import androidx.core.util.Pair
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.fikri.moviebox.core.data.source.remote.network.ApiConfig
+import com.fikri.moviebox.core.data.Resource
 import com.fikri.moviebox.core.data.source.remote.network.Token
-import com.fikri.moviebox.core.data.source.remote.response.GenreListResponse
-import com.fikri.moviebox.core.data.source.remote.response.MovieListResponse
 import com.fikri.moviebox.core.domain.model.Genre
 import com.fikri.moviebox.core.domain.model.Movie
 import com.fikri.moviebox.core.helper.DimensManipulation
 import com.fikri.moviebox.core.ui.adapter.FixedMovieListAdapter
 import com.fikri.moviebox.core.ui.adapter.GenreListAdapter
 import com.fikri.moviebox.databinding.ActivityMainBinding
+import com.fikri.moviebox.view_model.MainVewModel
 import com.google.android.flexbox.AlignItems
 import com.google.android.flexbox.FlexDirection
 import com.google.android.flexbox.FlexWrap
 import com.google.android.flexbox.FlexboxLayoutManager
-import kotlinx.coroutines.launch
-import org.json.JSONObject
-import retrofit2.Response
-import retrofit2.awaitResponse
-import java.io.IOException
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
 
-    private var isGenreTabCollapsed = true
+    private val viewModel: MainVewModel by viewModel()
 
-    private var listMovie: ArrayList<Movie> = arrayListOf()
-    private var listGenre: ArrayList<Genre> = arrayListOf()
+    private lateinit var listGenre: ArrayList<Genre>
+    private lateinit var listMovie: ArrayList<Movie>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        setupData()
+    }
+
+    private fun setupData() {
         binding.header.tvHeaderTitle.text = "Story Box"
 
         binding.rvPopularMovie.setHasFixedSize(true)
@@ -57,13 +53,31 @@ class MainActivity : AppCompatActivity() {
             alignItems = AlignItems.STRETCH
         }
 
-        lifecycleScope.launch {
+        binding.ibGenreToggle.setOnClickListener {
+            toggleGenreTab()
+        }
+
+        viewModel.isInitialObserveFlow.observe(this) {
+            if (!it) {
+                getAllGenre()
+                getPopularMovie()
+                viewModel.setFinishInitialObserveFlow()
+            }
+        }
+
+        binding.srlSwipeRefeshHome.setOnRefreshListener {
+            binding.srlSwipeRefeshHome.isRefreshing = false
             getAllGenre()
             getPopularMovie()
         }
 
-        binding.ibGenreToggle.setOnClickListener {
-            toggleGenreTab()
+        viewModel.listGenre.observe(this) {
+            listGenre = it
+            setGenreList(it)
+        }
+        viewModel.listMovie.observe(this) {
+            listMovie = it
+            setPopularMovieList(it)
         }
     }
 
@@ -102,100 +116,96 @@ class MainActivity : AppCompatActivity() {
                 val moveToGenreDiscover =
                     Intent(this@MainActivity, GenreDiscoverActivity::class.java)
                 moveToGenreDiscover.putExtra(GenreDiscoverActivity.EXTRA_SELECTED_GENRE, data)
-                moveToGenreDiscover.putExtra(GenreDiscoverActivity.EXTRA_LIST_OF_GENRE, listGenre)
+                moveToGenreDiscover.putExtra(
+                    GenreDiscoverActivity.EXTRA_LIST_OF_GENRE,
+                    listGenre
+                )
                 startActivity(moveToGenreDiscover)
             }
         })
     }
 
-    suspend fun getPopularMovie() {
-        val apiRequest = ApiConfig.getApiService().getListMovie(apiKey = Token.TMDB_TOKEN_V3)
+    fun getPopularMovie() {
+        binding.apply {
+            viewModel.getPopularMovie(Token.TMDB_TOKEN_V3).observe(this@MainActivity) { result ->
+                when (result) {
+                    is Resource.Loading -> {
+                        rlLoadingPopularMovie.visibility = View.VISIBLE
+                        rlPopularMovieMessage.visibility = View.GONE
+                        rvPopularMovie.visibility = View.GONE
+                    }
+                    is Resource.Success -> {
+                        val listMovie = result.data as ArrayList<Movie>
+                        viewModel.setListMovie(listMovie)
 
-        try {
-            val response: Response<MovieListResponse> = apiRequest.awaitResponse()
-            if (response.isSuccessful) {
-                val responseBody = response.body()
-                Log.d("Berhasil:", responseBody.toString())
-                responseBody?.let {
-                    it.results.forEach { movieResponse ->
-                        val movie = Movie(
-                            movieResponse.adult,
-                            movieResponse.backdropPath,
-                            movieResponse.genreIds,
-                            movieResponse.id,
-                            movieResponse.originalLanguage,
-                            movieResponse.originalTitle,
-                            movieResponse.overview,
-                            movieResponse.popularity,
-                            movieResponse.posterPath,
-                            movieResponse.releaseDate,
-                            movieResponse.title,
-                            movieResponse.video,
-                            movieResponse.voteAverage,
-                            movieResponse.voteCount
-                        )
-                        listMovie.add(movie)
+                        rlLoadingPopularMovie.visibility = View.GONE
+                        rlPopularMovieMessage.visibility = View.GONE
+                        rvPopularMovie.visibility = View.VISIBLE
+                        if (listMovie.size == 0) {
+                            rlPopularMovieMessage.visibility = View.VISIBLE
+                            tvPopularMovieMessage.text = "No Popular Movie Data"
+                        }
+                    }
+                    is Resource.Error -> {
+                        rlLoadingPopularMovie.visibility = View.GONE
+                        rlPopularMovieMessage.visibility = View.VISIBLE
+                        tvPopularMovieMessage.text = result.message
+                        rvPopularMovie.visibility = View.GONE
+                    }
+                    is Resource.NetworkError -> {
+                        rlLoadingPopularMovie.visibility = View.GONE
+                        rlPopularMovieMessage.visibility = View.VISIBLE
+                        tvPopularMovieMessage.text = "Connection Failed"
+                        rvPopularMovie.visibility = View.GONE
                     }
                 }
-                setPopularMovieList(listMovie)
-            } else {
-                var errorMessage: String? = null
-                try {
-                    val jObjError = JSONObject(response.errorBody()!!.string())
-                    errorMessage = jObjError.getString("message")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                Log.w("Error:", "${response.message()} | $errorMessage")
-                Toast.makeText(this, "${response.message()} | $errorMessage", Toast.LENGTH_SHORT)
-                    .show()
             }
-        } catch (e: IOException) {
-            Log.w("Network Error:", "Gak tau")
-            Toast.makeText(this, "Koneksi Gagal", Toast.LENGTH_SHORT).show()
+
         }
     }
 
-    suspend fun getAllGenre() {
-        val apiRequest = ApiConfig.getApiService().getAllGenre(apiKey = Token.TMDB_TOKEN_V3)
+    fun getAllGenre() {
+        binding.apply {
+            viewModel.getAllGenre(Token.TMDB_TOKEN_V3).observe(this@MainActivity) { result ->
+                when (result) {
+                    is Resource.Loading -> {
+                        rlLoadingGenre.visibility = View.VISIBLE
+                        rlGenreMessage.visibility = View.GONE
+                        rvGenre.visibility = View.GONE
+                    }
+                    is Resource.Success -> {
+                        val listGenre = result.data as ArrayList<Genre>
+                        viewModel.setListGenre(listGenre)
 
-        try {
-            val response: Response<GenreListResponse> = apiRequest.awaitResponse()
-            if (response.isSuccessful) {
-                val responseBody = response.body()
-                Log.d("Berhasil:", responseBody.toString())
-                responseBody?.let {
-                    it.genres.forEach { genreResponse ->
-                        val genre = Genre(
-                            genreResponse.id,
-                            genreResponse.name
-                        )
-                        listGenre.add(genre)
+                        rlLoadingGenre.visibility = View.GONE
+                        rlGenreMessage.visibility = View.GONE
+                        rvGenre.visibility = View.VISIBLE
+                        if (listGenre.size == 0) {
+                            rlPopularMovieMessage.visibility = View.VISIBLE
+                            tvPopularMovieMessage.text = "No Movie Genre Data"
+                        }
+                    }
+                    is Resource.Error -> {
+                        rlLoadingGenre.visibility = View.GONE
+                        rlGenreMessage.visibility = View.VISIBLE
+                        tvGenreMessage.text = result.message
+                        rvGenre.visibility = View.GONE
+                    }
+                    is Resource.NetworkError -> {
+                        rlLoadingGenre.visibility = View.GONE
+                        rlGenreMessage.visibility = View.VISIBLE
+                        tvGenreMessage.text = "Connection Failed"
+                        rvGenre.visibility = View.GONE
                     }
                 }
-                setGenreList(listGenre)
-            } else {
-                var errorMessage: String? = null
-                try {
-                    val jObjError = JSONObject(response.errorBody()!!.string())
-                    errorMessage = jObjError.getString("message")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                Log.w("Error:", "${response.message()} | $errorMessage")
-                Toast.makeText(this, "${response.message()} | $errorMessage", Toast.LENGTH_SHORT)
-                    .show()
             }
-        } catch (e: IOException) {
-            Log.w("Network Error:", "Gak tau")
-            Toast.makeText(this, "Koneksi Gagal", Toast.LENGTH_SHORT).show()
         }
     }
 
     fun toggleGenreTab() {
-        isGenreTabCollapsed = !isGenreTabCollapsed
+        viewModel.isGenreTabCollapsed = !viewModel.isGenreTabCollapsed
         val params = binding.llGenreTab.layoutParams
-        if (isGenreTabCollapsed) {
+        if (viewModel.isGenreTabCollapsed) {
             params.height = DimensManipulation.dpToPx(this, 140f).toInt()
             binding.ibGenreToggle.setImageDrawable(
                 ContextCompat.getDrawable(
@@ -215,3 +225,39 @@ class MainActivity : AppCompatActivity() {
         binding.llGenreTab.layoutParams = params
     }
 }
+
+
+//is Resource.Loading -> {
+//    loadingModal.showLoadingModal(
+//        this@LoginActivity,
+//        LoadingModal.TYPE_GENERAL,
+//        resources.getString(R.string.message_on_login)
+//    )
+//}
+//is Resource.Success -> {
+//    viewModel.apply {
+//        saveSession((result.data[0] as Session).token)
+//        saveUser((result.data[1] as User))
+//        startActivity(
+//            Intent(
+//                this@LoginActivity,
+//                HomeBottomNavigationActivity::class.java
+//            )
+//        )
+//        finish()
+//    }
+//}
+//is Resource.Error -> {
+//    viewModel.apply {
+//        responseType = result.failedType.toString()
+//        responseMessage = result.code.toString() + " | " + result.message
+//        setResponseModal(true)
+//    }
+//}
+//is Resource.NetworkError -> {
+//    viewModel.apply {
+//        responseType = result.failedType.toString()
+//        responseMessage = result.message
+//        setResponseModal(true)
+//    }
+//}
