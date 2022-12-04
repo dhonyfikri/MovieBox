@@ -15,6 +15,7 @@ import com.fikri.moviebox.core.data.source.remote.network.ApiConfig
 import com.fikri.moviebox.core.data.source.remote.network.Server
 import com.fikri.moviebox.core.data.source.remote.network.Token
 import com.fikri.moviebox.core.data.source.remote.response.MovieDetailResponse
+import com.fikri.moviebox.core.data.source.remote.response.MovieVideoListResponse
 import com.fikri.moviebox.core.data.source.remote.response.ReviewListResponse
 import com.fikri.moviebox.core.domain.model.*
 import com.fikri.moviebox.core.ui.adapter.FixedReviewListAdapter
@@ -81,6 +82,7 @@ class MovieDetailActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 getDetailMovie(movie.id as Int)
                 getTopReview(movie.id as Int)
+                getVideoTrailer(movie.id as Int)
             }
         } else {
             Glide.with(this@MovieDetailActivity)
@@ -245,6 +247,70 @@ class MovieDetailActivity : AppCompatActivity() {
                     )
                 }
                 setTopReview(listReview)
+            } else {
+                var errorMessage: String? = null
+                try {
+                    val jObjError = JSONObject(response.errorBody()!!.string())
+                    errorMessage = jObjError.getString("message")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                Log.w("Error:", "${response.message()} | $errorMessage")
+                Toast.makeText(this, "${response.message()} | $errorMessage", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        } catch (e: IOException) {
+            Log.w("Network Error:", "Gak tau")
+            Toast.makeText(this, "Koneksi Gagal", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    suspend fun getVideoTrailer(movieId: Int) {
+        val apiRequest = ApiConfig.getApiService()
+            .getMovieVideo(apiKey = Token.TMDB_TOKEN_V3, movieId = movieId)
+
+        try {
+            val response: Response<MovieVideoListResponse> = apiRequest.awaitResponse()
+            if (response.isSuccessful) {
+                val responseBody = response.body()
+                Log.d("Berhasil:", responseBody.toString())
+                val listMovieVideo: ArrayList<MovieVideo> = arrayListOf()
+                responseBody?.results?.map {
+                    if (it.type?.lowercase() == "trailer") {
+                        listMovieVideo.add(
+                            MovieVideo(
+                                it.iso6391,
+                                it.iso31661,
+                                it.name,
+                                it.key,
+                                it.site,
+                                it.size,
+                                it.type,
+                                it.official,
+                                it.publishedAt,
+                                it.id
+                            )
+                        )
+                    }
+                }
+                binding.btnTrailer.setOnClickListener {
+                    if (listMovieVideo.size > 0) {
+                        val moveToMovieTrailer =
+                            Intent(this@MovieDetailActivity, TrailerActivity::class.java)
+                        moveToMovieTrailer.putExtra(
+                            TrailerActivity.EXTRA_YOUTUBE_VIDEO,
+                            listMovieVideo[0]
+                        )
+                        startActivity(moveToMovieTrailer)
+                    } else {
+                        Toast.makeText(
+                            this@MovieDetailActivity,
+                            "Trailer unavailable",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
             } else {
                 var errorMessage: String? = null
                 try {
